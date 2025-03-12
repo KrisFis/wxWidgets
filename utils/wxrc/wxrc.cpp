@@ -10,13 +10,16 @@
 // For compilers that support precompilation, includes "wx/wx.h".
 #include "wx/wxprec.h"
 
-
 // for all others, include the necessary headers
 #ifndef WX_PRECOMP
     #include "wx/app.h"
     #include "wx/log.h"
     #include "wx/wxcrtvararg.h"
 #endif
+
+// EDIT-BEGIN(krisfis): Fix compilation when wxUSE_CMDLINE_PARSER is set to FALSE 
+#if wxUSE_CMDLINE_PARSER
+// EDIT-END(krisfis): Fix compilation when wxUSE_CMDLINE_PARSER is set to FALSE
 
 #include "wx/cmdline.h"
 #include "wx/xml/xml.h"
@@ -1120,3 +1123,17 @@ bool XmlResApp::Validate()
 
     return res == 0;
 }
+
+// EDIT-BEGIN(krisfis): Fix compilation when wxUSE_CMDLINE_PARSER is set to FALSE
+#else
+
+class XmlResApp : public wxAppConsole
+{
+public:
+    virtual bool OnInit() override { return true; }
+};
+
+wxIMPLEMENT_APP_CONSOLE(XmlResApp);
+
+#endif
+// EDIT-END(krisfis): Fix compilation when wxUSE_CMDLINE_PARSER is set to FALSE
