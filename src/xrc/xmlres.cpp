@@ -927,6 +927,94 @@ wxXmlNode *wxXmlResource::DoFindResource(wxXmlNode *parent,
     return nullptr;
 }
 
+// EDIT-BEGIN(krisfis): Allow lookup in wxXmlResource data records
+wxXmlNode* wxXmlResource::GetResourceNodeAndLocation(const std::function<bool(const wxXmlNode&)>& func, bool recursive, wxString* path) const
+{
+    // ensure everything is up-to-date: this is needed to support on-demand
+    // reloading of XRC files
+    const_cast<wxXmlResource *>(this)->UpdateResources();
+
+    for ( const wxXmlResourceDataRecord& rec : Data() )
+    {
+        wxXmlDocument * const doc = rec.Doc.get();
+        if ( !doc || !doc->GetRoot() )
+            continue;
+
+        wxXmlNode * const
+            found = DoFindResource(doc->GetRoot(), func, recursive);
+        if ( found )
+        {
+            if ( path )
+                *path = rec.File;
+
+            return found;
+        }
+    }
+
+    return nullptr;
+}
+
+wxXmlNode* wxXmlResource::FindResource(const std::function<bool(const wxXmlNode&)>& func, bool recursive, const wxString& contextStr)
+{
+    wxString path;
+    wxXmlNode * const
+        node = GetResourceNodeAndLocation(func, recursive, &path);
+
+    if ( !node )
+    {
+        ReportError
+        (
+            nullptr,
+            wxString::Format
+            (
+                "XRC resource \"%s\" not found",
+                !contextStr.IsEmpty() ? contextStr : wxT("UNKNOWN")
+            )
+        );
+    }
+#if wxUSE_FILESYSTEM
+    else // node was found
+    {
+        // ensure that relative paths work correctly when loading this node
+        // (which should happen as soon as we return as FindResource() result
+        // is always passed to CreateResFromNode())
+        m_curFileSystem.ChangePathTo(path);
+    }
+#endif // wxUSE_FILESYSTEM
+
+    return node;
+}
+
+wxXmlNode* wxXmlResource::DoFindResource(wxXmlNode* parent, const std::function<bool(const wxXmlNode&)>& func, bool recursive) const
+{
+    wxXmlNode *node;
+
+    // first search for match at the top-level nodes (as this is
+    // where the resource is most commonly looked for):
+    for (node = parent->GetChildren(); node; node = node->GetNext())
+    {
+        if (std::invoke(func, *node))
+            return node;
+    }
+
+    // then recurse in child nodes
+    if ( recursive )
+    {
+        for (node = parent->GetChildren(); node; node = node->GetNext())
+        {
+            if ( IsObjectNode(node) )
+            {
+                wxXmlNode* found = DoFindResource(node, func, true);
+                if ( found )
+                    return found;
+            }
+        }
+    }
+
+    return nullptr;
+}
+// EDIT-END(krisfis): Allow lookup in wxXmlResource data records
+
 wxXmlNode *wxXmlResource::FindResource(const wxString& name,
                                        const wxString& classname,
                                        bool recursive)

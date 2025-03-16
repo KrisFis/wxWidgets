@@ -368,6 +368,12 @@ protected:
     wxXmlNode *DoFindResource(wxXmlNode *parent, const wxString& name,
                               const wxString& classname, bool recursive) const;
 
+    // EDIT-BEGIN(krisfis): Allow lookup in wxXmlResource data records
+    wxXmlNode *GetResourceNodeAndLocation(const std::function<bool(const wxXmlNode&)>& func, bool recursive = false, wxString *path = nullptr) const;
+    wxXmlNode *FindResource(const std::function<bool(const wxXmlNode&)>& func, bool recursive = false, const wxString& contextStr = wxEmptyString);
+    wxXmlNode *DoFindResource(wxXmlNode *parent, const std::function<bool(const wxXmlNode&)>& func, bool recursive) const;
+    // EDIT-END(krisfis): Allow lookup in wxXmlResource data records
+
     // Creates a resource from information in the given node
     // (Uses only 'handlerToUse' if != nullptr)
     wxObject *CreateResFromNode(wxXmlNode *node, wxObject *parent,
